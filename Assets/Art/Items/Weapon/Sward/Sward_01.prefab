@@ -498,3 +498,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e5c65be38b3592a4ca7efc51991de77e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentWeaponDamage: 25

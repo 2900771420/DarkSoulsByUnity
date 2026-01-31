@@ -27,15 +27,25 @@ namespace LostLight {
             damageCollider.enabled = false;
         }
 
-        private void OnTriggerEnter(Collider other)
+        private void OnTriggerEnter(Collider collision)
         {
-            if (other.tag == "Hittalbe")
+            if (collision.tag == "Player")
             {
-                PlayerStatu playerStatus = other.GetComponent<PlayerStatu>();
+                PlayerStatu playerStatu = collision.GetComponent<PlayerStatu>();
 
-                if (playerStatus != null)
+                if (playerStatu != null)
                 {
-                    playerStatus.TakeDamage(currentWeaponDamage);
+                    playerStatu.TakeDamage(currentWeaponDamage);
+                }
+            }
+
+            if(collision.tag == "Enemy")
+            {
+                EnemyStatu enemyStatu = collision.GetComponent<EnemyStatu>();
+
+                if (enemyStatu != null)
+                {
+                    enemyStatu.TakeDamage(currentWeaponDamage);
                 }
             }
         }

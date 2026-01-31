@@ -58,7 +58,7 @@ namespace LostLight
 
             playerManager.isGrounded = true;
             // playerManager.isInAir = false;
-            ignoreForGroundCheck = ~(1 << 8 | 1 << 11);
+            ignoreForGroundCheck = ~(1 << 8 | 1 << 11 | 1 << 10);
 
             Physics.gravity = new Vector3(0, -15f, 0);
 
@@ -172,45 +172,45 @@ namespace LostLight
         }
 
 
-        [SerializeField]
-        public Transform groundCheckPoint;// 用于地面检测
-        public float groundCheckDistance = 0.2f;// 检测距离
 
         [Header("Fall Tuning")]
         [SerializeField] public float fallGravityMultiplier = 30f;
         [SerializeField] public float maxFallSpeed = 350f;
 
+        [Header("References")]
+        public Transform groundCheckPoint;
+
+        [Header("Ground Check (Flat Capsule)")]
+        public float groundCheckRadius = 0.3f;   // 圆柱半径（宽）
+        public float groundCheckHeight = 0.2f;   // 圆柱高度（扁）
+        public LayerMask groundLayer;
+
+
         public void HandleFalling(float delta, Vector3 moveDirection)
         {
             bool wasGrounded = playerManager.isGrounded;
 
-            // 1. 检测是否接地
-            RaycastHit hit;
-            bool isGroundedNow01 = Physics.Raycast(
-                groundCheckPoint.position, Vector3.down, out hit, groundCheckDistance, ignoreForGroundCheck );
-            Debug.DrawRay(groundCheckPoint.position, Vector3.down * groundCheckDistance, Color.red);
-            //bool isGroundedNow02 = Physics.Raycast(
-            //    groundCheckPoint.position, Vector3.down, out hit, groundCheckDistance, ignoreForGroundCheck);
-            //Debug.DrawRay(groundCheckPoint.position, Vector3.up * groundCheckDistance, Color.red);
-
-            bool isGroundedNow = isGroundedNow01;
+            // 1. 使用扁平 Capsule 进行触地检测
+            bool isGroundedNow = CheckGroundedCapsule();
             playerManager.isGrounded = isGroundedNow;
+            //Debug.Log("当前落地状态" + isGroundedNow);
 
-            // 2. 状态切换处理
+            // 2. 接地 / 离地状态切换
             if (!wasGrounded && isGroundedNow)
             {
+                //Debug.Log("刚刚落地" + isGroundedNow);
                 // 刚刚落地
                 if (inAirTimer > 0.3f && inAirTimer <= 1f)
                 {
                     animatorHandler.PlayTargetAnimation("landing", true);
-                }else if(inAirTimer > 1f)
+                }
+                else if (inAirTimer > 1f)
                 {
                     animatorHandler.PlayTargetAnimation("rolling", true);
                 }
                 else
                 {
-                    animatorHandler.PlayTargetAnimation("Locomotion", false);
-
+                    animatorHandler.PlayTargetAnimation("Normal", false);
                 }
 
                 inAirTimer = 0f;
@@ -219,43 +219,85 @@ namespace LostLight
             else if (wasGrounded && !isGroundedNow)
             {
                 // 刚刚离地
-                animatorHandler.PlayTargetAnimation("falling", false);
+                //Debug.Log("刚刚离地" + isGroundedNow);
+
+
                 playerManager.isInAir = true;
                 inAirTimer = 0f;
             }
-
-            // 3. 空中计时
-            if (!playerManager.isGrounded)
+            else
             {
-                // inAirTimer += delta;
-
-                // 增强下落重力（只在向下时）
-                //if (rigidbody.velocity.y < 0f)
-                //{
-                    rigidbody.AddForce(Physics.gravity * (fallGravityMultiplier), ForceMode.Acceleration);
-                //}
-
-                // 限制最大下落速度
-                //if (rigidbody.velocity.y < -maxFallSpeed)
-                //{
-                //    Vector3 v = rigidbody.velocity;
-                //    v.y = -maxFallSpeed;
-                //    rigidbody.velocity = v;
-                //}
+                //Debug.Log("既没有刚刚离地，又没有刚刚落地");
             }
 
-            // 4. 限制下落速度（防止无限加速）
+            // 3. 空中状态
             if (!playerManager.isGrounded)
             {
-                Vector3 v = rigidbody.velocity;
-                float maxFallSpeed = 50f;
+                inAirTimer += delta;
 
-                if (v.y < -maxFallSpeed)
+                // 增强下落重力
+                rigidbody.AddForce(
+                    Physics.gravity * fallGravityMultiplier,
+                    ForceMode.Acceleration
+                );
+                if (inAirTimer > 0.3f)
                 {
-                    v.y = -maxFallSpeed;
-                    rigidbody.velocity = v;
+                    animatorHandler.PlayTargetAnimation("falling", false);
                 }
             }
+
+            // 4. 限制最大下落速度
+            Vector3 v = rigidbody.velocity;
+            float maxFallSpeed = 50f;
+            if (v.y < -maxFallSpeed)
+            {
+                v.y = -maxFallSpeed;
+                rigidbody.velocity = v;
+            }
+        }
+
+        // ==============================
+        // 扁平 Capsule 触地检测
+        // ==============================
+        private bool CheckGroundedCapsule()
+        {
+            Vector3 center = groundCheckPoint.position;
+
+            Vector3 point1 = center + Vector3.up * (groundCheckHeight * 0.5f);
+            Vector3 point2 = center - Vector3.up * (groundCheckHeight * 0.5f);
+
+            bool grounded = Physics.CheckCapsule(
+                point1,
+                point2,
+                groundCheckRadius,
+                ignoreForGroundCheck,
+                QueryTriggerInteraction.Ignore
+            );
+
+            // Debug：红色显示检测区域
+            DrawCapsule(point1, point2, groundCheckRadius, Color.red);
+
+            return grounded;
+        }
+
+        // ==============================
+        // Debug 绘制 Capsule（红色）
+        // ==============================
+        private void DrawCapsule(Vector3 p1, Vector3 p2, float radius, Color color)
+        {
+            // 上圆
+            Debug.DrawLine(p1 + Vector3.forward * radius, p1 - Vector3.forward * radius, color);
+            Debug.DrawLine(p1 + Vector3.right * radius, p1 - Vector3.right * radius, color);
+
+            // 下圆
+            Debug.DrawLine(p2 + Vector3.forward * radius, p2 - Vector3.forward * radius, color);
+            Debug.DrawLine(p2 + Vector3.right * radius, p2 - Vector3.right * radius, color);
+
+            // 侧边连接线
+            Debug.DrawLine(p1 + Vector3.forward * radius, p2 + Vector3.forward * radius, color);
+            Debug.DrawLine(p1 - Vector3.forward * radius, p2 - Vector3.forward * radius, color);
+            Debug.DrawLine(p1 + Vector3.right * radius, p2 + Vector3.right * radius, color);
+            Debug.DrawLine(p1 - Vector3.right * radius, p2 - Vector3.right * radius, color);
         }
 
 

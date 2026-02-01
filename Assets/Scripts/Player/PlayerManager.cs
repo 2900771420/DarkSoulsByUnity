@@ -21,6 +21,7 @@ namespace LostLight
         public bool isSprinting;
         public bool isInAir;
         public bool isGrounded;
+        public bool canDoCombo; 
 
 
         private void Awake()
@@ -38,6 +39,7 @@ namespace LostLight
         private void Update()
         {
             isInteracting = animator.GetBool("isInteracting");
+            canDoCombo = animator.GetBool("canDoCombo");
 
 
 

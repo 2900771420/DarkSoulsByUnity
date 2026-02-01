@@ -10,10 +10,15 @@ namespace LostLight {
         private void OnTriggerEnter(Collider other)
         {
             PlayerStatu playerStatu = other.GetComponent<PlayerStatu>();
+            EnemyStatu enemyStatu = other.GetComponent<EnemyStatu>();
 
             if(playerStatu != null)
             {
                 playerStatu.TakeDamage(damage);
+            }
+            if(enemyStatu != null)
+            {
+                enemyStatu.TakeDamage(damage);
             }
         }
     }

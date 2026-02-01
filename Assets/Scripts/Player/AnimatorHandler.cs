@@ -125,6 +125,16 @@ namespace LostLight
             canRotate = false;
         }
 
+        public void EnableCombo()
+        {
+            anim.SetBool("canDoCombo", true);
+        }
+        public void DisableCombo()
+        {
+            anim.SetBool("canDoCombo", false);
+
+        }
+
         // 基于动画驱动角色移动控制
         public void OnAnimatorMove()
         {
